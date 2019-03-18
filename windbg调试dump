@@ -1,0 +1,87 @@
+﻿1. 加载dump文件（ File -> Open Crash Dump  ）
+2. 设置符号文件（ File -> Symbol File Path ）
+【用;分隔，设置pdb文件路径，可选添加微软系统库路径】如 （D:\mss;G:）
+windows系统符号也可以线上下载，如：srv*d:\SymbolsLocal*http://msdl.microsoft.com/download/symbols，
+建议将本地路径放在下载路径前面，如：【D:\mss;G:;srv*d:\SymbolsLocal*http://msdl.microsoft.com/download/symbols】
+3. 加载配置,执行.reload（其实可以不执行这个）
+#### OK，到了这里，基本上的配置需要已经完成，现在可以开始对dump进行分析了。
+4. 执行 !analyze -v
+可以根据生成的所有描述看一下，系统会自动显示一些错误信息和堆栈，当然也可以跳过这部分，
+直接观察STACK_COMMAND，按照STACK_COMMAND的命令直接执行，如 ~58s; .ecxr; kb
+5. 跳转到指定栈帧 .frame n
+第一帧是0，依次往下递增，找到第一个应用的函数 .frame 5
+6. 执行dv，打印临时变量
+就通过.frame + dv 各种判断是否有异常数据，至于打印数组什么的可以深究。
+#### 自此，基础的验证结束
+优化执行命令： ~58s; .ecxr; kbn;（观察栈）; kpn;（观察参数） .frame Num; dv /i/t/v（打印局部变量）
+====================================================================================
+命令种类：.类型命令是做配置用的  !类型命令是扩展命令
+
+## 设置本地符号和查看符号路径：.sympath
+//重置本地符号路径
+0:015> .sympath d:\ddlxsyms1;
+Symbol search path is: d:\ddlxsyms1
+Expanded Symbol search path is: d:\ddlxsyms1
+//增加一个本地符号路径
+0:015> .sympath+ d:\ddlxsyms2;
+Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2
+Expanded Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2
+//查看符号路径
+0:015> .sympath
+Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2
+Expanded Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2
+
+## 设置一个指向微软符号服务器的路径命令：.symfix
+//增加一个指向微软符号服务器的路径
+0:015> .symfix+ c:\symbols;
+0:015> .sympath
+Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2;srv*
+Expanded Symbol search path is: d:\ddlxsyms1;d:\ddlxsyms2;SRV*c:\symbols;*http://msdl.microsoft.com/download/symbols
+//重置只有一个指向微软符号服务器的路径
+0:015> .symfix c:\symbols;
+0:015> .sympath
+Symbol search path is: srv*
+Expanded Symbol search path is: SRV*c:\symbols;*http://msdl.microsoft.com/download/symbols
+
+## 设置本地源码和查看源码路径：.srcpath（用法与.sympath相似）
+0:015> .srcpath d:\ddlxsrcs1
+Source search path is: d:\ddlxsrcs1
+0:015> .srcpath+ d:\ddlxsrcs2
+Source search path is: d:\ddlxsrcs1;d:\ddlxsrcs2
+0:015> .srcpath
+Source search path is: d:\ddlxsrcs1;d:\ddlxsrcs2
+
+
+## 设置一个指向源码服务器的路径命令：.srcfix（用法与.symfix相似）
+
+=======================================================================
+（~： 线程相关命令）
+~ *   表示所有线程
+~ #   表示异常或者产生调试事件的线程
+~ * k 查看所有线程的栈
+~ 1 k 查看一号线程的栈
+~ 2 s 表示选择2号线程作为当前线程
+
+（.ecxr）【不算一个命令，应该说是特殊的执行指令】
+功用：定位当前异常的上下文信息，并显示指定记录中的重要寄存器（可观察是否有异常值）
+
+（k：查看栈指令）
+k指令单独使用时，之显示栈地址、返回地址、函数名信息
+参数：
+b 显示函数调用时的前三个参数
+c 只显示函数名
+p 显示函数的所有参数，包括参数的名字、类型、值。
+v 显示帧指针遗漏(FPO)信息。在基于x86处理器,显示器还包括调用约定信息
+n 显示调用栈的每帧编号
+f 显示调用栈的每帧占用字节数
+默认情况下使用k显示当前线程栈，如果加上线程命令前缀，可以查看某个线程栈，如~* k查看所有线程栈
+如kbnf 10 显示10层调用栈，包含函数参数、栈编号、占用字节数
+**** 常用：kbn 或者 kpn
+
+（dv: 显示本层局部变量信息）
+常用的参数：
+/i 显示变量是局部的、全局的、参数、还是函数等信息
+/v 显示变量所在地址
+/t 显示变量的类型
+**** 常用：dv /i/t/v
+
